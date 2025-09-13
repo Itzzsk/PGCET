@@ -1,21 +1,70 @@
-# Create mobile_app.py (MOBILE-FIRST VERSION WITH FONTAWESOME & TOGGLES)
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import json
 import os
+import requests
 from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-# Load the ML model
+# Google Drive direct download URL for your ML model
+MODEL_DOWNLOAD_URL = "https://drive.google.com/uc?export=download&id=1KaTsdYcRwxSOJTyfhc8FHyz-HYAXSb-a"
+
+def download_from_google_drive(url, filename):
+    """Download file from Google Drive if it doesn't exist locally"""
+    if os.path.exists(filename):
+        print(f"✅ {filename} already exists locally")
+        return True
+    
+    try:
+        print(f"📥 Downloading {filename} from Google Drive...")
+        response = requests.get(url, stream=True)
+        
+        if response.status_code == 200:
+            total_size = int(response.headers.get('content-length', 0))
+            
+            with open(filename, 'wb') as f:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        
+                        # Show progress for large files
+                        if total_size > 0 and downloaded % (1024*1024) == 0:  # Every 1MB
+                            percent = (downloaded / total_size) * 100
+                            print(f"📊 Progress: {percent:.1f}%")
+            
+            print(f"✅ Successfully downloaded {filename}")
+            return True
+        else:
+            print(f"❌ Failed to download {filename}. Status code: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error downloading {filename}: {str(e)}")
+        return False
+
+# Load the ML model with Google Drive integration
 try:
-    from advanced_ml_predictor import AdvancedPGCETPredictor
-    predictor = AdvancedPGCETPredictor.load_models('advanced_pgcet_model.pkl', 'combined_pgcet_data.json')
-    print("✅ ML models loaded successfully")
+    # Download model from Google Drive if needed
+    model_downloaded = download_from_google_drive(MODEL_DOWNLOAD_URL, 'advanced_pgcet_model.pkl')
+    
+    if model_downloaded:
+        from advanced_ml_predictor import AdvancedPGCETPredictor
+        predictor = AdvancedPGCETPredictor.load_models('advanced_pgcet_model.pkl', 'combined_pgcet_data.json')
+        print("✅ ML models loaded successfully from Google Drive")
+    else:
+        predictor = None
+        print("⚠️ Using fallback mode - ML model download failed")
+        
 except Exception as e:
     print(f"⚠️ Using fallback mode: {e}")
     predictor = None
+
+# Rest of your Flask app code continues here...
+
 
 # Mobile-First HTML Template with FontAwesome
 MOBILE_HTML = '''
