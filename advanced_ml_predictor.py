@@ -1,4 +1,3 @@
-# Create advanced_ml_predictor.py (CORRECTED VERSION)
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor, RandomForestRegressor
@@ -7,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, mean_absolute_error
 import joblib
 import json
+
 
 class AdvancedPGCETPredictor:
     def __init__(self, data_file='combined_pgcet_data.json'):
@@ -218,7 +218,7 @@ class AdvancedPGCETPredictor:
                 college_features = self.extract_enhanced_features(college)
                 
                 try:
-                    # Prepare features
+                    # Prepare features for prediction
                     features = np.array([[
                         student_rank,
                         self.category_encoder.transform([category])[0],
@@ -280,7 +280,7 @@ class AdvancedPGCETPredictor:
                     print(f"⚠️ Skipping {college['collegeCode']}: {e}")
                     continue
         
-        # Sort by probability and preference match
+        # Sort by preference match and probability
         predictions.sort(key=lambda x: (x['preference_match'], x['admission_probability']), reverse=True)
         return predictions
     
@@ -322,6 +322,7 @@ class AdvancedPGCETPredictor:
         except FileNotFoundError:
             print(f"❌ Model file {filepath} not found!")
             return predictor
+
 
 # Train and test
 if __name__ == "__main__":
