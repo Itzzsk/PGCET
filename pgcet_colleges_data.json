@@ -1,0 +1,54 @@
+[
+  {
+    "collegeCode": "C401",
+    "collegeName": "Acharya Institute Of Mngt And Sc",
+    "location": "Peenya, BANGALORE",
+    "cutoffs": {
+      "1G": 1755,
+      "1H": null,
+      "2AG": 2016,
+      "2AH": null,
+      "2BG": 2884,
+      "2BH": 2965,
+      "3AG": 1617,
+      "3AH": null,
+      "3BG": 1506,
+      "3BH": null,
+      "GM": 1498,
+      "GMH": 1749,
+      "NKN": null,
+      "PH": 4634,
+      "SCG": null,
+      "SCH": 3719,
+      "STG": null,
+      "STH": null,
+      "XD": null
+    }
+  },
+  {
+    "collegeCode": "C402",
+    "collegeName": "ACHARYA INSTITUTE OF GRADUATE STUDIES",
+    "location": "Soldevanahalli, BANGALORE",
+    "cutoffs": {
+      "1G": 2887,
+      "1H": null,
+      "2AG": 2902,
+      "2AH": 4176,
+      "2BG": 4316,
+      "2BH": null,
+      "3AG": 2562,
+      "3AH": null,
+      "3BG": 2353,
+      "3BH": 2699,
+      "GM": 2308,
+      "GMH": 2638,
+      "NKN": null,
+      "PH": 7261,
+      "SCG": 8835,
+      "SCH": 4920,
+      "STG": null,
+      "STH": 8792,
+      "XD": null
+    }
+  }
+]
