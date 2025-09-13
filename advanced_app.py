@@ -1134,16 +1134,22 @@ def home():
 @app.route('/api/predict-mobile', methods=['POST'])
 def predict_mobile():
     try:
-        data = request.json
-        student_rank = int(data['rank'])
-        category = data['category']
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No JSON data received'}), 400
+            
+        student_rank = int(data.get('rank', 0))
+        category = data.get('category', '')
         preferences = data.get('preferences', {})
         
-        if predictor and predictor.is_trained:
+        if not student_rank or not category:
+            return jsonify({'success': False, 'error': 'Rank and category are required'}), 400
+        
+        if predictor and hasattr(predictor, 'is_trained') and predictor.is_trained:
             predictions = predictor.predict_with_intelligence(student_rank, category, preferences)
-            eligible_colleges = [p for p in predictions if p['admission_probability'] > 0.2][:20]
+            eligible_colleges = [p for p in predictions if p.get('admission_probability', 0) > 0.2][:20]
         else:
-            # Fallback basic search if ML model not available
+            # Fallback basic search
             eligible_colleges = basic_search(student_rank, category, preferences)
         
         return jsonify({
@@ -1155,7 +1161,7 @@ def predict_mobile():
         })
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def basic_search(student_rank, category, preferences):
     """Fallback search when ML model is not available"""
@@ -1169,19 +1175,14 @@ def basic_search(student_rank, category, preferences):
             if category in cutoffs and cutoffs[category] is not None:
                 cutoff = int(cutoffs[category]) if str(cutoffs[category]).isdigit() else None
                 if cutoff and student_rank <= cutoff:
-                    # City preference filter
-                    if preferences.get('preferred_city'):
-                        if preferences['preferred_city'].upper() not in college.get('location', '').upper():
-                            continue
-                    
                     eligible.append({
-                        'college_code': college['collegeCode'],
-                        'college_name': college['collegeName'],
-                        'location': college['location'],
-                        'city': college.get('city', college['location'].split(',')[-1].strip()),
+                        'college_code': college.get('collegeCode', ''),
+                        'college_name': college.get('collegeName', ''),
+                        'location': college.get('location', ''),
+                        'city': college.get('city', college.get('location', '').split(',')[-1].strip()),
                         'cutoff_rank': cutoff,
                         'best_round': 'First Round',
-                        'admission_probability': 0.8,  # Default probability
+                        'admission_probability': 0.8,
                         'safety_level': 'Eligible',
                         'rank_difference': cutoff - student_rank,
                         'preference_match': False
@@ -1190,7 +1191,8 @@ def basic_search(student_rank, category, preferences):
         # Sort by cutoff rank
         eligible.sort(key=lambda x: x['cutoff_rank'])
         return eligible[:20]
-    except:
+    except Exception as e:
+        print(f"Basic search error: {e}")
         return []
 
 @app.route('/api/college/<college_code>')
@@ -1199,7 +1201,7 @@ def get_college_details(college_code):
         with open('combined_pgcet_data.json', 'r') as f:
             colleges = json.load(f)
         
-        college = next((c for c in colleges if c['collegeCode'] == college_code), None)
+        college = next((c for c in colleges if c.get('collegeCode') == college_code), None)
         if college:
             return jsonify(college)
         else:
@@ -1210,12 +1212,10 @@ def get_college_details(college_code):
 @app.route('/api/data-status')
 def get_data_status():
     try:
-        # Get file modification time
         if os.path.exists('combined_pgcet_data.json'):
             mod_time = os.path.getmtime('combined_pgcet_data.json')
             last_updated = datetime.fromtimestamp(mod_time).strftime('%Y-%m-%d %H:%M')
             
-            # Count total colleges
             with open('combined_pgcet_data.json', 'r') as f:
                 colleges = json.load(f)
                 total_colleges = len(colleges)
@@ -1227,7 +1227,7 @@ def get_data_status():
             'success': True,
             'last_updated': last_updated,
             'total_colleges': total_colleges,
-            'model_status': 'Active' if predictor and predictor.is_trained else 'Fallback Mode'
+            'model_status': 'Active' if predictor and hasattr(predictor, 'is_trained') and predictor.is_trained else 'Fallback Mode'
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1235,13 +1235,9 @@ def get_data_status():
 @app.route('/api/refresh-data', methods=['POST'])
 def refresh_data():
     try:
-        # In a real scenario, you would reload data from source
-        # For now, we'll just reload the JSON file and model
         global predictor
         
-        # Reload data
         if os.path.exists('combined_pgcet_data.json'):
-            # Try to reload ML model
             try:
                 from advanced_ml_predictor import AdvancedPGCETPredictor
                 predictor = AdvancedPGCETPredictor.load_models('advanced_pgcet_model.pkl', 'combined_pgcet_data.json')
@@ -1262,6 +1258,21 @@ def refresh_data():
             
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Add error handlers to return JSON instead of HTML
+@app.errorhandler(404)
+def not_found(error):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'API endpoint not found'}), 404
+    else:
+        return render_template_string(MOBILE_HTML)
+
+@app.errorhandler(500)
+def internal_error(error):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Internal server error'}), 500
+    else:
+        return render_template_string(MOBILE_HTML)
 
 if __name__ == '__main__':
     print("📱 Mobile PGCET Cutoff Finder Starting...")
